@@ -2,36 +2,35 @@
 import math as m
 
 
-def prime_sieve(n, get_real_sieve=False):
-    sieve = []
-
-    for i in range(0, n):
-       sieve.append(True)
+def prime_sieve(n):
+    sieve = { i: True for i in range(0, n) }
 
     sieve[0] = False
     sieve[1] = False
 
     for j in range(2, int(m.sqrt(n)) + 1):
-      if sieve[j] == True:
+      if j not in sieve or sieve[j] == True:
+
         for p in range(j*2, n, j):
           sieve[p] = False
 
-    if get_real_sieve:
-      return sieve
-
-    return { i for i, is_prime in enumerate(sieve) if is_prime == True }
+    return sieve
 
 
-big_sieve = prime_sieve(10_000_000, True)
+print("generating big sieve...")
+big_sieve = prime_sieve(150_000_000)
 N = len(big_sieve)
+print("big sieve done")
 
 cache = {}
 def is_prime(n):
-  if n < N:
+  if n in big_sieve:
     return big_sieve[n]
 
   if n in cache:
     return cache[n]
+
+  print("OH NO: " + str(n))
 
   if n <= 3:
     return n > 1
@@ -64,35 +63,61 @@ def check_combo(combo):
   return True
 
 
+def _test_intersection(pair_dict, intersection, depth = 1, good_numbers = set()):
+  if depth == 5:
+    return good_numbers
+
+  for n in intersection:
+    new_intersection = intersection.intersection(pair_dict[n])
+
+    if len(intersection) + depth < 5:
+      continue
+
+    recursive_value = _test_intersection(pair_dict, new_intersection, depth + 1, {*good_numbers, n})
+
+    if recursive_value == False:
+      continue
+
+    return recursive_value
+
+  return False
+
+def test_intersection(pair_dict, n):
+  return _test_intersection(pair_dict, pair_dict[n], good_numbers={n})
+
+
 def main():
-  sieve = prime_sieve(5_000)
+  primes = set()
 
-  pairs = []
+  print("generating primes...")
 
-  for new_combo in combinations(sieve, 2):
+  for i in range(0, 10_000):
+    if is_prime(i):
+      primes.add(i)
+
+  pair_map = {}
+
+  print("generating pair_map...")
+  for new_combo in combinations(primes, 2):
     a, b = new_combo
 
     if is_prime(int(f"{a}{b}")) and is_prime(int(f"{b}{a}")):
-      pairs.append((a, b))
+      if a not in pair_map:
+        pair_map[a] = set()
 
-  for combo in combinations(pairs, 3):
-    t1, t2, t3 = combo
+      pair_map[a].add(b)
 
-    first = {t1[0], t1[1], t2[0], t2[1]}
-    if len(first) < 4:
-      continue
+      if b not in pair_map:
+        pair_map[b] = set()
 
-    for val in t3:
-      to_check = {*first, val}
-      if len(to_check) < 5:
-        continue
+      pair_map[b].add(a)
 
-      print(to_check)
-      result = check_combo(to_check)
-      if result == True:
-        print(to_check)
-        from sys import exit
-        exit(0)
+  for prime in pair_map.keys():
+    result = test_intersection(pair_map, prime)
+
+    if result:
+      s = sum(list(result))
+      print(f"{prime:6}: {result} => {s}")
 
 
 if __name__ == '__main__':
